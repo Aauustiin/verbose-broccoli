@@ -1,0 +1,19 @@
+LOADI 0 0 - Load the width of the image.
+LOADI 1 1 - Load the height of the image.
+LOADI 2 2 - Load the top left pixel (Begin calculating blurred value of top left corner).
+LOADI 3 3
+ADD 2 3 - Load and add first neighbour.
+MOV 3 0
+ADDI 3 2
+LOAD 4 3
+ADD 2 4
+ADDI 3 1
+LOAD 4 3
+ADD 2 4
+DIVI 2 4 - Divide answer by the number of neighbours.
+MOV 3 0 - Calculate the address of the top left pixel in the result buffer.
+MUL 3 1
+ADDI 3 2
+STORE 2 3 - Store the .
+MOV 2 0
+ADDI 2 1
