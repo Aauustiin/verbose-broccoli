@@ -1,19 +1,72 @@
 LOADI 0 0 - Load the width of the image.
 LOADI 1 1 - Load the height of the image.
-LOADI 2 2 - Load the top left pixel (Begin calculating blurred value of top left corner).
-LOADI 3 3
-ADD 2 3 - Load and add first neighbour.
-MOV 3 0
-ADDI 3 2
-LOAD 4 3
-ADD 2 4
+COPY 2 0
+MUL 2 1 - Calculate Width * Height
+COPYI 3 2 - Initial current pixel address.
+LOAD 4 3 - This will be where the result is calculated.
+COPY 5 3 - We calculate the addresses of neighbours in here.
+COPYI 6 0 - We will keep a count of how many neighbours this pixel has here.
+ADDI 5 1 - Calculate address of the neighbour to the right.
+COPY 7 3
+SUBI 7 1
+MOD 7 0
+CMPI 7 0
+BRANCHE 7 4
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add pixel to the right to the running total.
+ADDI 6 1 - Increment neighbour counter.
+COPY 7 2
+SUB 7 0
+ADDI 7 1
+CMP 7 3 - Should be +1
+BRANCHG 7 14
+ADD 5 0 - Calculate address of bottom right neighbour.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment neighbour counter.
+SUBI 5 1 - Bottom centre neighbour address.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment counter.
+SUBI 5 1 - Bottom left neighbour address.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total
+ADDI 6 1 - Increment counter.
+JUMP 3 0
+ADD 5 0
+SUBI 5 2
+SUB 5 0 - Left neighbour address.
+COPY 7 3
+SUBI 7 2
+MOD 7 0
+CMPI 7 0
+BRANCHE 7 4
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment neighbour counter.
+COPY 7 0
+ADDI 7 2
+COPY 9 3
+CMP 9 7 - +1 means IS on top row, so branch.
+BRANCHG 9 13
+SUB 5 0 - Top left neighbour address.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment neighbour counter.
+ADDI 5 1 - Top centre neighbour address.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment counter.
+ADDI 5 1 - Top right neighbour address.
+LOAD 7 5 - Load value of neighbour pixel into register 7.
+ADD 4 7 - Add to running total.
+ADDI 6 1 - Increment counter.
+DIV 4 6 - Divide running total by number of neighbours.
+COPY 10 3
+ADD 10 2
+STORE 10 4
 ADDI 3 1
-LOAD 4 3
-ADD 2 4
-DIVI 2 4 - Divide answer by the number of neighbours.
-MOV 3 0 - Calculate the address of the top left pixel in the result buffer.
-MUL 3 1
-ADDI 3 2
-STORE 2 3 - Store the .
-MOV 2 0
-ADDI 2 1
+COPY 11 2
+ADDI 11 2
+COPY 12 3
+CMP 12 11
