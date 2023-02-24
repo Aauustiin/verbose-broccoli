@@ -23,8 +23,13 @@ enum Opcode {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let program_name = &args[1];
-    let path = format!("programs/{}", program_name);
+    let path: String;
+    if args.len() == 1 {
+        path = String::from("programs/blur.txt");
+    } else {
+        let program_name = &args[1];
+        path = format!("programs/{}", program_name);
+    }
     let reader = fs::read_to_string(path).expect("Failed to read file.");
     let program: Vec<(Opcode, i32, i32)> = reader.lines().map(parse_line).collect();
 
@@ -50,7 +55,6 @@ fn main() {
 
     while program_counter < program.len() {
         let instruction = fetch(&program, &mut program_counter);
-
         decode();
         execute(
             &instruction,
