@@ -1,6 +1,9 @@
-use std::{env, fs};
+use std::str::FromStr;
+use std::string::ToString;
+use std::{env, fs, io};
+use strum_macros::{EnumString, Display};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, EnumString, Display)]
 enum Opcode {
     ADD,
     ADDI,
@@ -19,19 +22,40 @@ enum Opcode {
     BRANCHE,
     BRANCHG,
     JUMP,
+    BREAK,
+}
+
+#[derive(PartialEq)]
+enum Mode {
+    RELEASE,
+    DEBUGC,
+    DEBUGS,
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let path: String;
-    if args.len() == 1 {
-        path = String::from("programs/blur.txt");
-    } else {
-        let program_name = &args[1];
+
+    let mut path = String::from("programs/blur.txt");
+    let mut mode = Mode::RELEASE;
+
+    if args.len() > 1 {
+        let program_name = args.last().expect("Error parsing command line arguments");
+        println!("Running {}", program_name);
         path = format!("programs/{}", program_name);
+        if args.contains(&String::from("debug")) {
+            println!("Running in debug mode");
+            mode = Mode::DEBUGC;
+        }
     }
+
     let reader = fs::read_to_string(path).expect("Failed to read file.");
-    let program: Vec<(Opcode, i32, i32)> = reader.lines().map(parse_line).collect();
+    let lines = reader.lines();
+    let program: Vec<(Opcode, i32, i32)>;
+    if mode == Mode::RELEASE {
+        program = lines.filter(|x| x != &"BREAK 0 0").map(parse_line).collect();
+    } else {
+        program = lines.map(parse_line).collect();
+    }
 
     let mut registers = [0; 16];
     let mut memory = [0; 128];
@@ -61,7 +85,24 @@ fn main() {
             &mut registers,
             &mut memory,
             &mut program_counter,
+            &mut mode,
         );
+
+        if mode == Mode::DEBUGS {
+            println!("Instruction: {} {} {}", instruction.0.to_string(), instruction.1, instruction.2);
+            println!("Registers: {:?}\n", registers);
+            println!("Memory: {:?}\n", memory);
+
+            let mut guess = String::new();
+
+            io::stdin()
+                .read_line(&mut guess)
+                .expect("Failed to read line");
+
+            if guess != "\r\n" {
+                mode = Mode::DEBUGC
+            }
+        }
 
         cycles += 1;
         instructions_executed += 1;
@@ -78,7 +119,7 @@ fn main() {
 
 fn parse_line(line: &str) -> (Opcode, i32, i32) {
     let tokens: Vec<&str> = line.split(' ').collect();
-    let opcode = str_to_opcode(tokens[0]);
+    let opcode = Opcode::from_str(tokens[0]).expect("Error parsing opcode");
     let arg1 = tokens[1]
         .parse()
         .expect(&format!("Couldn't parse first operand of: {line}."));
@@ -86,29 +127,6 @@ fn parse_line(line: &str) -> (Opcode, i32, i32) {
         .parse()
         .expect(&format!("Couldn't parse second operand of: {line}."));
     return (opcode, arg1, arg2);
-}
-
-fn str_to_opcode(input: &str) -> Opcode {
-    match input {
-        "ADD" => Opcode::ADD,
-        "ADDI" => Opcode::ADDI,
-        "SUB" => Opcode::SUB,
-        "SUBI" => Opcode::SUBI,
-        "MUL" => Opcode::MUL,
-        "DIV" => Opcode::DIV,
-        "MOD" => Opcode::MOD,
-        "COPY" => Opcode::COPY,
-        "COPYI" => Opcode::COPYI,
-        "LOAD" => Opcode::LOAD,
-        "LOADI" => Opcode::LOADI,
-        "STORE" => Opcode::STORE,
-        "CMP" => Opcode::CMP,
-        "CMPI" => Opcode::CMPI,
-        "BRANCHE" => Opcode::BRANCHE,
-        "BRANCHG" => Opcode::BRANCHG,
-        "JUMP" => Opcode::JUMP,
-        _ => panic!("Invalid opcode {}", input),
-    }
 }
 
 fn fetch(program: &[(Opcode, i32, i32)], program_counter: &mut usize) -> (Opcode, i32, i32) {
@@ -124,6 +142,7 @@ fn execute(
     registers: &mut [i32],
     memory: &mut [i32],
     program_counter: &mut usize,
+    mode: &mut Mode,
 ) {
     match &instruction.0 {
         Opcode::ADD => registers[instruction.1 as usize] += registers[instruction.2 as usize],
@@ -171,5 +190,10 @@ fn execute(
             }
         }
         Opcode::JUMP => *program_counter += instruction.1 as usize - 1,
+        Opcode::BREAK => {
+            if *mode == Mode::DEBUGC {
+                *mode = Mode::DEBUGS;
+            }
+        }
     }
 }
